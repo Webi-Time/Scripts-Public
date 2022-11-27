@@ -108,6 +108,11 @@ function New-ComgestEvent {
 
 Function Log {
 	    Param ( $sInput, $sLogDir, $lvl ,[string]$color = "Cyan")
+
+        if (-not (Test-Path -Path $sLogDir)) {
+            New-Item -ItemType Directory -Path $logFileDir
+        }
+
 	    $sLogFile = $sLogDir + "\" + "Log_" + $sTimeStamp + ".log"
 	    $sLineTimeStamp = Get-Date -f "dd/MM/yyyy HH:mm:ss"
 	    $sInput | % {
