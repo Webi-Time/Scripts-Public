@@ -3,37 +3,69 @@
     ##
     ## SUCCESS
     ##
-    $Message_Event_Success_SignIn = # Event 2560
-    "   Utilisateur `t: $sRunUserDomain\$sRunUser
-        Description `t: Connexion au tenant effectué par le script 
-        Date`t: $(Get-Date)
-    " 
-    $Message_Event_Success_SignOut = # Event 2561
-    "   Utilisateur `t: $sRunUserDomain\$sRunUser
-        Description `t: Deconnexion au tenant effectué par le script 
-        Date`t: $(Get-Date)
-    "  
+    $Event_Success_SignIn = @{ 
+        message = "
+            Utilisateur`t : $sRunUserDomain\$sRunUser
+            Script`t : $sRunScript
+            Description : Connexion au tenant effectuée par le script
+            Date`t : $(Get-Date)
+        "
+        id = 2560
+        EventType = 'Information'
+        LogSource = $LogSource
+    }
+    $Event_Success_SignOut = @{ 
+        message = "
+            Utilisateur`t : $sRunUserDomain\$sRunUser
+            Script`t : $sRunScript
+            Description : Deconnexion du tenant effectuée par le script
+            Date`t : $(Get-Date)
+        "
+        id = 2561
+        EventType = 'Information'
+        LogSource = $LogSource
+    }
+
     ##
     ## ERROR
     ##
-    $Message_Event_Error_SignIn = # Event 2570
-    "   Utilisateur `t: $sRunUserDomain\$sRunUser
-        Description `t: Impossible de se connecter 
-        Date`t: $(Get-Date)
-        Information complementaire sur l'erreur :`n`r
-    " 
-    $Message_Event_Error_SignOut = # Event 2571
-    "   Utilisateur `t: $sRunUserDomain\$sRunUser
-        Description `t: Impossible de se déconnecter 
-        Date`t: $(Get-Date)
-        Information complementaire sur l'erreur :`n`r
-    "  
-    $Message_Event_Error_SendMail = # Event 2572
-    "   Utilisateur `t: $sRunUserDomain\$sRunUser
-        Description `t: Impossible d'envoyer le mail
-        Date`t: $(Get-Date)
-        Information complementaire :`n`r
-    " 
+    $Event_Error_SignIn = @{ 
+        message = "
+            Utilisateur`t : $sRunUserDomain\$sRunUser
+            Script`t : $sRunScript
+            Description : Impossible de se connecter au tenant 
+            Date`t : $(Get-Date)
+            Information complementaire sur l'erreur :`n`r
+        "
+        id = 2570
+        EventType = 'Error'
+        LogSource = $LogSource
+    }
+    $Event_Error_SignOut = @{ 
+        message = "
+            Utilisateur`t : $sRunUserDomain\$sRunUser
+            Script`t : $sRunScript
+            Description : Impossible de se déconnecter du tenant 
+            Date`t : $(Get-Date)
+            Information complementaire sur l'erreur :`n`r
+        "
+        id = 2571
+        EventType = 'Error'
+        LogSource = $LogSource
+    }
+    $Event_Error_SendMail = @{ 
+        message = "
+            Utilisateur`t : $sRunUserDomain\$sRunUser
+            Script`t : $sRunScript
+            Description : Impossible d'envoyer le mail
+            Date`t : $(Get-Date)
+            Information complementaire sur l'erreur :`n`r
+        "
+        id = 2572
+        EventType = 'Error'
+        LogSource = $LogSource
+    }
+
 #endregion Events Generale
 
 
@@ -50,20 +82,20 @@ function Connect-MsGraphTenant {
     $clientId = $settings.clientId
     $tenantId = $settings.tenantId
     $certificate = $settings.clientCertificate
-    $organisation = $settings.organisationName
+    #$organisation = $settings.organisationName
 
     ## Déchargement du module 365 et déconnexion 
     try
     { 
         Log "Tentative de connexion au tenant " $logFileDir 2 Cyan
-        Connect-MgGraph -ClientId $clientId -TenantId $tenantId -CertificateThumbprint $certificate -ForceRefresh -ErrorAction Stop | Out-Null   
-        New-ComgestEvent -Message $Message_Event_Success_SignIn -EventID 2560 -EventInstance Information -Source $LogSource
+        Connect-MgGraph -ClientId $clientId -TenantId $tenantId -CertificateThumbprint $certificate -ForceRefresh -ErrorAction Stop | Out-Null
+        New-CustomEvent -Message $Event_Success_SignIn.message -EventID $Event_Success_SignIn.id -EventInstance $Event_Success_SignIn.EventType -Source $Event_Success_SignIn.LogSource
         Log "Connexion au tenant effectuée" $Global:logFileDir 1 Green
     }
     catch 
     {
         Log "Erreur - Impossible de se connecter au tenant `r`n`t`t  Message d'erreur : $($_)" $logFileDir 0 Red
-        New-ComgestEvent -Message "$Message_Event_Error_SignIn `t Message d'erreur : $($_)" -EventID 2570 -EventInstance Error -Source $LogSource
+        New-CustomEvent -Message "$($Event_Error_SignIn.message) `t Message d'erreur : $($_)" -EventID $Event_Error_SignIn.id -EventInstance $Event_Error_SignIn.EventType -Source $Event_Error_SignIn.LogSource
         exit 1
     }
 }
@@ -71,18 +103,18 @@ function Connect-MsGraphTenant {
 function Disconnect-MsGraphTenant {
 	## Déchargement du module 365 et déconnexion 
     try{
-        Disconnect-MgGraph -ErrorAction Stop  | Out-Null     
+        Disconnect-MgGraph -ErrorAction Stop  | Out-Null
         Log "Tentative de deconnexion du tenant " $logFileDir 2 Cyan
-        New-ComgestEvent -Message $Message_Event_Success_SignOut -EventID 2561 -EventInstance Information -Source $LogSource
+        New-CustomEvent -Message $Event_Success_SignOut.message -EventID $Event_Success_SignOut.id -EventInstance $Event_Success_SignOut.EventType -Source $Event_Success_SignOut.LogSource
         Log "Deconnexion du tenant effectué" $logFileDir 1 Green
     } catch {
-        Log "Erreur - Impossible de se deconnecter au tenant`r`n`t`t  Message d'erreur : $($_)" $logFileDir 0 Red            
-        New-ComgestEvent -Message "$Message_Event_Error_SignOut `t Message d'erreur : $($_)" -EventID 2571 -EventInstance Error -Source $LogSource
+        Log "Erreur - Impossible de se deconnecter au tenant`r`n`t`t  Message d'erreur : $($_)" $logFileDir 0 Red
+        New-CustomEvent -Message "$($Event_Error_SignOut.message) `t Message d'erreur : $($_)" -EventID $Event_Error_SignOut.id -EventInstance $Event_Error_SignOut.EventType -Source $Event_Error_SignOut.LogSource
         exit 1
     }
 }
 
-function New-ComgestEvent {
+function New-CustomEvent {
     param
     ( 
         [Parameter(Position=0, Mandatory = $false)] $EventLog  = "Application",
@@ -108,14 +140,9 @@ function New-ComgestEvent {
 
 Function Log {
 	    Param ( $sInput, $sLogDir, $lvl ,[string]$color = "Cyan")
-
-        if (-not (Test-Path -Path $sLogDir)) {
-            New-Item -ItemType Directory -Path $logFileDir
-        }
-
-	    $sLogFile = $sLogDir + "\" + "Log_" + $sTimeStamp + ".log"
+	    $sLogFile = $sLogDir + "\" + "Log_$($sRunScript)_" + $sTimeStamp + ".log"
 	    $sLineTimeStamp = Get-Date -f "dd/MM/yyyy HH:mm:ss"
-	    $sInput | % {
+	    $sInput | ForEach-Object {
 		    $sLine = $sLineTimeStamp + " - " + $_		    
 		    $sLine | Out-File $sLogFile -Append:$true -Force
 	    }
@@ -125,13 +152,13 @@ Function Log {
 
 function Import-MsGraph ([ValidateSet("CurrentUser", "AllUsers")][System.String]$scope = "AllUsers",[boolean]$RefreshInstallModule = $false){
     Log "Verification du module MSGraph" $logFileDir 1 Cyan
-    $module = (Get-Module -ListAvailable | where {$_.Name -like "Microsoft.Graph*"})
+    $module = (Get-Module -ListAvailable | Where-Object {$_.Name -like "Microsoft.Graph*"})
     if (([string]::IsNullOrEmpty($module) -or $module.count -le 2) -or $RefreshInstallModule) # Si pas installé
     {
         Log "Installation du module MSGraph" $logFileDir 1 Yellow
         Import-Module PowerShellGet -ErrorAction SilentlyContinue
         Install-Module Microsoft.Graph -Scope $scope -Confirm:$false -Force -ErrorAction SilentlyContinue | Out-Null
-        sleep 5
+        Start-Sleep 5
         try{
             Log "Chargement du module MSGraph" $logFileDir 2 Cyan
             Import-Module -Name Microsoft.Graph -Force | Out-Null
@@ -139,7 +166,7 @@ function Import-MsGraph ([ValidateSet("CurrentUser", "AllUsers")][System.String]
         catch {
             Log "Erreur - Impossible de charger le module completement`r`n`t`t  Message d'erreur : $($_)" $logFileDir 0 Red 
             Log "Le module est chargée en partie. Voici la liste des modules chargés :" $logFileDir 1 Yellow
-            Log $($(Get-Command -Module Microsoft.Graph* | select Source -Unique) | Out-String) $logFileDir 2 Yellow
+            Log $($(Get-Command -Module Microsoft.Graph* | Select-Object Source -Unique) | Out-String) $logFileDir 2 Yellow
         }
     }
     elseif ([string]::IsNullOrEmpty((Get-Module | Where-Object {($_.Name -eq "Microsoft.Graph.Users") -or ($_.Name -eq "Microsoft.Graph.Authentication")})))  # Si installé mais pas importé
@@ -151,13 +178,48 @@ function Import-MsGraph ([ValidateSet("CurrentUser", "AllUsers")][System.String]
         catch {
             Log "Erreur - Impossible de charger le module completement`r`n`t`t  Message d'erreur : $($_)" $logFileDir 0 Red 
             Log "Le module est chargée en partie. Voici la liste des modules chargés :" $logFileDir 1 Yellow
-            Log $($(Get-Command -Module Microsoft.Graph* | select Source -Unique) | Out-String) $logFileDir 2 Yellow 
+            Log $($(Get-Command -Module Microsoft.Graph* | Select-Object Source -Unique) | Out-String) $logFileDir 2 Yellow 
         }
     }
     else # si installer et importé
     {
         Log "Le module MSGraph est deja chargé" $logFileDir 2 Cyan
     }
+}
+
+function SendMail {
+    param (
+        [string]$ToMail,
+        [string]$MailSubject,
+        [string]$MailBody
+    )
+    Import-Module Microsoft.Graph.Users.Actions
+    $params = @{
+        Message = @{
+            Subject = "$MailSubject"
+            Body = @{
+                ContentType = "HTML"
+                Content = "$MailBody"
+            }
+            ToRecipients = @(
+                @{
+                    EmailAddress = @{
+                        Address = "$ToMail"
+                    }
+                }
+            )
+            Importance = "High"
+        }
+    }
+        
+    try {       
+        Send-MgUserMail -UserId jmarc@webi-time.fr -BodyParameter $params -ErrorAction Stop
+    } catch { 
+        Log "Erreur - Impossible d'envoyer le mail `r`n`t Message d'erreur : $($_)" $logFileDir 0 Red
+        New-CustomEvent -Message "$($Event_Error_SendMail.message) `t Message d'erreur : $($_)" -EventID $Event_Error_SendMail.id -EventInstance $Event_Error_SendMail.EventType -Source $Event_Error_SendMail.LogSource
+        Disconnect-MsGraphTenant
+        exit 1   
+    } 
 }
 
 #endregion Function generique
